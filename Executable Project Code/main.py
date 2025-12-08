@@ -11,7 +11,7 @@ main.iconphoto(True, icon)
 main.geometry("1024x768")
 main.resizable(0,0)
 
-response = requests.get("https://api.potterdb.com/v1/characters?filter[name_cont]=Harry James Potter")
+response = requests.get("https://api.potterdb.com/v1/characters?filter[house]=gryffindor")
     
 def button():
     if response.status_code == 200:
@@ -25,18 +25,18 @@ def button():
         attrs = c["attributes"]
         
         output += (
-            f"Name: {attrs.get('name')}"
-            f"House: {attrs.get('house')}"
-            f"Species: {attrs.get('species')}"
-            f"==="
+            f"Name: {attrs.get('name')}\n"
+            f"House: {attrs.get('house')}\n"
+            f"Species: {attrs.get('species')}\n"
+            f"===\n"
         )
     
     hpLabel.config(text={output})
 
-pressMe = Button(main, text="Harry James Potter", command=lambda:button())
-pressMe.pack(expand=True, fill=BOTH)
+pressMe = Button(main, text="Click me", command=lambda:button())
+pressMe.pack(fill=BOTH)
 
 hpLabel = Label(main, text="")
-hpLabel.pack(side=BOTTOM ,expand=True, fill=BOTH)
+hpLabel.pack(side=BOTTOM, fill=BOTH, expand=True)
 
 mainloop()
