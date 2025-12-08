@@ -11,7 +11,7 @@ main.iconphoto(True, icon)
 main.geometry("800x600")
 main.resizable(0,0)
 
-response = requests.get("https://api.potterdb.com/v1/characters?filter[name_cont]=Weasley")
+response = requests.get("https://api.potterdb.com/v1/characters?filter[name_cont]=Potter")
 
 if response.status_code == 200:
     data = response.json()
