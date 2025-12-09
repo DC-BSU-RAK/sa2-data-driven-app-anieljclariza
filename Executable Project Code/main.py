@@ -8,7 +8,7 @@ icon = tk.PhotoImage(file=r"Executable Project Code\harry-potter_flaticon.com.pn
 
 main.title("A Harry Potter fan's Harry Potter Database")
 main.iconphoto(True, icon)
-main.geometry("1024x768")
+main.geometry("1152x864")
 main.resizable(0,0)
 
 response = requests.get("https://api.potterdb.com/v1/characters?filter[house]=gryffindor")
