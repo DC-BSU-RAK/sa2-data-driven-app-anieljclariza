@@ -12,7 +12,7 @@ background_image = background_image.resize((900, 700))
 background_photo = ImageTk.PhotoImage(background_image)
 
 main.title("A Harry Potter fan's Harry Potter Database Program")
-main.iconphoto(True, icon)
+main.iconphoto(True, window_icon)
 main.geometry("900x700")
 main.config()
 main.resizable(0,0)
