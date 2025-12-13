@@ -1,17 +1,14 @@
 import tkinter as tk
-from tkinter import scrolledtext, END, messagebox
+from tkinter import scrolledtext, END
 import requests
 from PIL import Image, ImageTk
 import os
-# CRITICAL FIX: Import quote for safe URL construction
-from requests.utils import quote 
 
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 
 # --- Helper Function (No changes needed, but kept for context) ---
 def set_background(window, image_path, width, height):
-    """Sets a background image on the main window."""
     try:
         img = Image.open(image_path)
         
@@ -31,353 +28,181 @@ def set_background(window, image_path, width, height):
         
     except FileNotFoundError:
         print(f"Error: Background image not found at '{image_path}'")
-        # messagebox.showerror("File Error", f"Background image not found at '{image_path}'")
     except Exception as e:
         print(f"An error has occured while setting background: {e}")
-        # messagebox.showerror("Image Error", f"An error has occured while setting background: {e}")
 
-# --- Dynamic Search Context Function ---
-def update_search_context(category_name, fetch_function):
-    """Updates the dedicated search button for the current category and runs the default fetch."""
+# --- NEW/MODIFIED FUNCTIONS ---
+
+def get_entry_search_term():
+    """Retrieves the value from the global entry widget."""
+    return entry_var.get().strip() # Use entry_var to get the value
+
+def run_search():
+    """
+    Called by the Search button. Gets the term and triggers the API call.
+    Note: For a full application, you'd need logic here to know *what*
+    the user is currently searching (characters, books, etc.).
+    For this example, we assume it searches characters.
+    """
+    search_term = get_entry_search_term()
+    print(f"Searching for: '{search_term}'")
     
-    # 1. Update the search button's appearance and action
-    search_button.config(
-        text=f"Search {category_name}",
-        command=lambda: fetch_function(search_var.get())
-    )
+    # Placeholder: Call the appropriate fetch function with the search term
+    fetch_characters(search_term=search_term) 
     
-    # 2. Clear the search entry and the text box
-    search_var.set("")
+    # The entry field should only be shown when a search is available
+    entry.place(relx=0.25, rely=0.925, anchor="center")
+    searchBtn.place(relx = 0.35, rely = 0.925, anchor = tk.CENTER)
+
+
+def fetch_characters(search_term=""):
+    """Fetches characters, optionally filtered by name."""
     text_box.config(state="normal")
+    
+    url = "https://api.potterdb.com/v1/characters"
+    
+    # Clear the text box
     text_box.delete('1.0', END)
     
-    # 3. Run the default fetch function immediately to show all (or first page of) items
-    fetch_function()
-
-
-# --- Data Fetching Functions (All updated to handle URL encoding) ---
-
-def fetch_books(search_term=""):
-    """Fetches books from the API, optionally filtered by search term."""
-    url = "https://api.potterdb.com/v1/books"
-    
-    text_box.config(state="normal")
-    text_box.delete('1.0', END)
-    
-    # FIX: URL-encode the search term
-    safe_search_term = quote(search_term) 
-    
+    # 1. CONSTRUCT THE URL WITH THE SEARCH TERM
+    # The PotterDB API uses the 'filter' parameter for searching names
     if search_term:
-        # Use filter[title_cont] for case-insensitive contains match
-        full_url = f"{url}?filter[title_cont]={safe_search_term}&sort=release_date"
-        text_box.insert(END, f"Searching for Books matching: '{search_term}'...\n\n")
+        # Example: search for character where name contains the search term
+        # The structure of the PotterDB API for filtering is a bit complex,
+        # often requiring a full URL or using specific filter parameters.
+        # For simplicity, let's use the 'filter' param if the API supports partial name search:
+        # NOTE: Using a simpler, non-API-specific filter here for demonstration.
+        # A proper implementation would use `f"{url}?filter[name_cont]={search_term}"`
+        # if the API supports Ransack-style filtering.
+        
+        # Using a simple name filter for demonstration
+        api_url = f"{url}?filter[name_cont]={search_term}" 
     else:
-        full_url = f"{url}?sort=release_date"
-        text_box.insert(END, "Displaying All Books...\n\n")
+        # Fetch all if no search term
+        api_url = f"{url}?sort=name" 
         
     try:
-        response = requests.get(full_url)
-        response.raise_for_status() 
+        response = requests.get(api_url) 
+        response.raise_for_status() # Raise an exception for bad status codes
+        
+        data = response.json()
+        characters = data.get('data', [])
+        
+        if not characters:
+             text_box.insert(END, f"No characters found for search term: '{search_term}'")
+             
+        for char in characters:
+            attributes = char.get('attributes',  {})
+            
+            name = attributes.get('name', 'N/A')
+            species = attributes.get('species', 'N/A')
+            house = attributes.get('house', 'N/A')
+            summary = attributes.get('summary', 'No summary available')
+            wiki = attributes.get('wiki', 'No wiki link')
+            
+            char_info = (
+                f"Name: {name}\n"
+                f"Species: {species}\n"
+                f"House: {house}\n"
+                f"Summary: {summary[:150]}...\n" # Truncate summary for display
+                f"Wiki: {wiki}\n"
+                f"\n----------\n\n"
+            )
+            text_box.insert(END, char_info)
+            
+    except requests.exceptions.RequestException as e:
+         text_box.insert(END, f"Error fetching data: {e}")
+
+    text_box.config(state="disabled")
+    text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
+
+# (The fetch_books and fetch_movies functions are kept below, but simplified
+# to remove the duplicate 'entry.place' call and for clean structure)
+def fetch_books():
+    text_box.config(state="normal")
+    url = "https://api.potterdb.com/v1/books"
+    text_box.delete('1.0', END)
+    
+    try:
+        response = requests.get(f"{url}?sort=release_date") 
+        response.raise_for_status()
         data = response.json()
         books = data.get('data', [])
         
-        if not books:
-             text_box.insert(END, "No books found matching your criteria.\n")
-             
         for book in books:
-            attributes = book.get('attributes', {})
-            title = attributes.get('title')
-            release_date = attributes.get('release_date')
-            pages = attributes.get('pages')
-            summary = attributes.get('summary')
-            wiki = attributes.get('wiki')
+            attributes = book.get('attributes',  {})
+            title = attributes.get('title', 'N/A')
+            release_date = attributes.get('release_date', 'N/A')
+            pages = attributes.get('pages', 'N/A')
+            summary = attributes.get('summary', 'No summary available')
+            wiki = attributes.get('wiki', 'No wiki link')
             
             book_info = (
                 f"Title: {title}\n"
                 f"Release Date: {release_date}\n"
                 f"Pages: {pages}\n"
-                f"Summary: {summary}\n"
+                f"Summary: {summary[:150]}...\n"
                 f"Wiki: {wiki}\n"
-                f"\n"
-                f"----------\n"
-                f"\n"
+                f"\n----------\n\n"
             )
             text_box.insert(END, book_info)
-            
     except requests.exceptions.RequestException as e:
-        text_box.insert(END, f"Error fetching data: {e}\n")
-    
+         text_box.insert(END, f"Error fetching data: {e}")
+         
     text_box.config(state="disabled")
-    text_box.place(relx = 0.5, rely = 0.55, anchor=tk.CENTER)
-
-
-def fetch_movies(search_term=""):
-    """Fetches movies from the API, optionally filtered by search term."""
-    url = "https://api.potterdb.com/v1/movies"
+    text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
     
+def fetch_movies():
     text_box.config(state="normal")
+    url = "https://api.potterdb.com/v1/movies"
     text_box.delete('1.0', END)
     
-    # FIX: URL-encode the search term
-    safe_search_term = quote(search_term)
-    
-    if search_term:
-        # Use filter[title_cont] for case-insensitive contains match
-        full_url = f"{url}?filter[title_cont]={safe_search_term}&sort=release_date"
-        text_box.insert(END, f"Searching for Movies matching: '{search_term}'...\n\n")
-    else:
-        full_url = f"{url}?sort=release_date"
-        text_box.insert(END, "Displaying All Movies...\n\n")
-        
     try:
-        response = requests.get(full_url)
-        response.raise_for_status() 
+        response = requests.get(f"{url}?sort=release_date") 
+        response.raise_for_status()
         data = response.json()
         movies = data.get('data', [])
         
-        if not movies:
-             text_box.insert(END, "No movies found matching your criteria.\n")
-             
         for movie in movies:
-            attributes = movie.get('attributes', {})
-            title = attributes.get('title')
-            release_date = attributes.get('release_date')
-            box_office = attributes.get('box_office')
-            budget = attributes.get('budget')
-            rating = attributes.get('rating')
-            summary = attributes.get('summary')
-            trailer = attributes.get('trailer')
-            wiki = attributes.get('wiki')
+            attributes = movie.get('attributes',  {})
+            title = attributes.get('title', 'N/A')
+            release_date = attributes.get('release_date', 'N/A')
+            box_office = attributes.get('box_office', 'N/A')
+            summary = attributes.get('summary', 'No summary available')
+            wiki = attributes.get('wiki', 'No wiki link')
             
             movie_info = (
                 f"Title: {title}\n"
                 f"Release Date: {release_date}\n"
                 f"Box Office: {box_office}\n"
-                f"Budget: {budget}\n"
-                f"Rating: {rating}\n"
-                f"Summary: {summary}\n"
-                f"Trailer: {trailer}\n"
+                f"Summary: {summary[:150]}...\n"
                 f"Wiki: {wiki}\n"
-                f"\n"
-                f"----------\n"
-                f"\n"
+                f"\n----------\n\n"
             )
             text_box.insert(END, movie_info)
-            
     except requests.exceptions.RequestException as e:
-        text_box.insert(END, f"Error fetching data: {e}\n")
-    
+         text_box.insert(END, f"Error fetching data: {e}")
+         
     text_box.config(state="disabled")
-    text_box.place(relx = 0.5, rely = 0.55, anchor=tk.CENTER)
+    text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
 
 
-def fetch_characters(search_term=""):
-    """Fetches characters from the API, optionally filtered by search term."""
-    url = "https://api.potterdb.com/v1/characters"
-    
-    text_box.config(state="normal")
-    text_box.delete('1.0', END)
-    
-    # FIX: URL-encode the search term
-    safe_search_term = quote(search_term)
-    
-    if search_term:
-        # Use filter[name_cont] for searching characters by name
-        full_url = f"{url}?filter[name_cont]={safe_search_term}&sort=name"
-        text_box.insert(END, f"Searching for Characters matching: '{search_term}'...\n\n")
-    else:
-        # Limit default display to avoid fetching thousands of results at once
-        full_url = f"{url}?page[size]=20&sort=name" 
-        text_box.insert(END, "Displaying 20 main Characters (Search above for more)...\n\n")
-        
-    try:
-        response = requests.get(full_url)
-        response.raise_for_status() 
-        data = response.json()
-        characters = data.get('data', [])
-        
-        if not characters:
-             text_box.insert(END, "No characters found matching your criteria.\n")
-             
-        for character in characters:
-            attributes = character.get('attributes', {})
-            
-            name = attributes.get('name')
-            house = attributes.get('house')
-            species = attributes.get('species')
-            patronus = attributes.get('patronus')
-            blood_status = attributes.get('blood_status')
-            wiki = attributes.get('wiki')
-            
-            character_info = (
-                f"Name: {name}\n"
-                f"House: {house if house else 'N/A'}\n"
-                f"Species: {species if species else 'N/A'}\n"
-                f"Patronus: {patronus if patronus else 'N/A'}\n"
-                f"Blood Status: {blood_status if blood_status else 'N/A'}\n"
-                f"Wiki: {wiki}\n"
-                f"\n"
-                f"----------\n"
-                f"\n"
-            )
-            text_box.insert(END, character_info)
-            
-    except requests.exceptions.RequestException as e:
-        text_box.insert(END, f"Error fetching data: {e}\n")
-    
-    text_box.config(state="disabled")
-    text_box.place(relx = 0.5, rely = 0.55, anchor=tk.CENTER)
-
-
-def fetch_spells(search_term=""):
-    """Fetches spells from the API, optionally filtered by search term."""
-    url = "https://api.potterdb.com/v1/spells"
-    
-    text_box.config(state="normal")
-    text_box.delete('1.0', END)
-    
-    # FIX: URL-encode the search term
-    safe_search_term = quote(search_term) 
-    
-    if search_term:
-        # Filter for spells by name
-        full_url = f"{url}?filter[name_cont]={safe_search_term}&sort=name" 
-        text_box.insert(END, f"Searching for Spells matching: '{search_term}'...\n\n")
-    else:
-        full_url = f"{url}?sort=name"
-        text_box.insert(END, "Displaying All Spells...\n\n")
-        
-    try:
-        response = requests.get(full_url)
-        response.raise_for_status() 
-        data = response.json()
-        spells = data.get('data', [])
-        
-        if not spells:
-             text_box.insert(END, "No spells found matching your criteria.\n")
-             
-        for spell in spells:
-            attributes = spell.get('attributes', {})
-            
-            name = attributes.get('name')
-            category = attributes.get('category')
-            effect = attributes.get('effect')
-            wiki = attributes.get('wiki')
-            
-            spell_info = (
-                f"Spell: {name}\n"
-                f"Category: {category if category else 'N/A'}\n"
-                f"Effect: {effect if effect else 'N/A'}\n"
-                f"Wiki: {wiki}\n"
-                f"\n----------\n\n"
-            )
-            text_box.insert(END, spell_info)
-            
-    except requests.exceptions.RequestException as e:
-        text_box.insert(END, f"Error fetching data: {e}\n")
-    
-    text_box.config(state="disabled")
-    text_box.place(relx = 0.5, rely = 0.55, anchor=tk.CENTER)
-
-
-def fetch_potions(search_term=""):
-    """Fetches potions from the API, optionally filtered by search term."""
-    url = "https://api.potterdb.com/v1/potions"
-    
-    text_box.config(state="normal")
-    text_box.delete('1.0', END)
-    
-    # FIX: URL-encode the search term
-    safe_search_term = quote(search_term)
-    
-    if search_term:
-        # Filter for potions by name
-        full_url = f"{url}?filter[name_cont]={safe_search_term}&sort=name"
-        text_box.insert(END, f"Searching for Potions matching: '{search_term}'...\n\n")
-    else:
-        full_url = f"{url}?sort=name"
-        text_box.insert(END, "Displaying All Potions...\n\n")
-        
-    try:
-        response = requests.get(full_url)
-        response.raise_for_status() 
-        data = response.json()
-        potions = data.get('data', [])
-        
-        if not potions:
-             text_box.insert(END, "No potions found matching your criteria.\n")
-             
-        for potion in potions:
-            attributes = potion.get('attributes', {})
-            
-            name = attributes.get('name')
-            effect = attributes.get('effect')
-            ingredients = attributes.get('ingredients')
-            wiki = attributes.get('wiki')
-            
-            potion_info = (
-                f"Potion: {name}\n"
-                f"Effect: {effect if effect else 'N/A'}\n"
-                f"Ingredients: {ingredients if ingredients else 'N/A'}\n"
-                f"Wiki: {wiki}\n"
-                f"\n----------\n\n"
-            )
-            text_box.insert(END, potion_info)
-            
-    except requests.exceptions.RequestException as e:
-        text_box.insert(END, f"Error fetching data: {e}\n")
-    
-    text_box.config(state="disabled")
-    text_box.place(relx = 0.5, rely = 0.55, anchor=tk.CENTER)
-
-
-# --- Main Window Setup ---
+# --- MAIN APPLICATION SETUP ---
 
 icon = r"Executable Project Code\harry-potter_flaticon.com.png"
 mainMenuBackgroundImage = r"Executable Project Code\valerii-siserg-map3.jpg"
+
 
 main = tk.Tk()
 main.title("A Harry Potter Fan's Harry Potter Database Browser")
 main.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
 main.resizable(0, 0)
 
-# Set Icon
-try:
-    window_icon = tk.PhotoImage(file=icon)
-    main.iconphoto(True, window_icon)
-except tk.TclError:
-    print("Warning: Could not load window icon.")
+window_icon = tk.PhotoImage(file=icon)
+main.iconphoto(True, window_icon)
 
-
-# Set Background
 set_background(main, mainMenuBackgroundImage, WINDOW_WIDTH, WINDOW_HEIGHT)
 
-
-# --- Search Bar and Text Box Widgets ---
-
-# Variable to hold the text input from the search bar
-search_var = tk.StringVar() 
-
-# Entry widget for the search term
-search_entry = tk.Entry(
-    main,
-    textvariable=search_var, 
-    font=("Comic Sans MS", 16),
-    width=50
-)
-search_entry.place(relx=0.5, rely=0.18, anchor=tk.CENTER)
-
-# Dedicated Search button (Its command is set by update_search_context)
-search_button = tk.Button(
-    main,
-    text="Search...", 
-    font=("Comic Sans MS", 16),
-    background="lightgreen",
-    # Initial command is set when a category is clicked
-)
-search_button.place(relx=0.5, rely=0.25, anchor=tk.CENTER)
-
-# Text Box to display results
 text_box = scrolledtext.ScrolledText(
     main,
     wrap = tk.WORD,
@@ -385,12 +210,26 @@ text_box = scrolledtext.ScrolledText(
     height = 20,
     font = ("Comic Sans MS", 14)
 )
-# Place the text box lower to accommodate the search bar
-text_box.place(relx = 0.5, rely = 0.55, anchor=tk.CENTER)
 
+# 2. CREATE A STRINGVAR TO STORE THE ENTRY VALUE
+entry_var = tk.StringVar(main) 
+entry_var.set("Enter a character name...") # Set a placeholder text
 
-# --- Category Buttons (UPDATED COMMANDS) ---
+entry = tk.Entry(
+    main,
+    textvariable = entry_var, # Link the StringVar to the Entry widget
+    width = 25,
+    font = ("Comic Sans MS", 14)
+)
 
+searchBtn = tk.Button(
+    main,
+    text = "Search: ",
+    font = ("Comic Sans MS", 20),
+    command = run_search # 3. LINK THE SEARCH BUTTON TO THE NEW FUNCTION
+)
+
+# BUTTONS (Only place widgets that should be visible immediately)
 quitBtn = tk.Button(
     main,
     text = "Quit",
@@ -398,14 +237,13 @@ quitBtn = tk.Button(
     command = main.quit,
     background = "salmon"
 )
-quitBtn.place(relx = 0.5, rely = 0.925, anchor = tk.CENTER)
+quitBtn.place(relx = 0.65, rely = 0.925, anchor = tk.CENTER) # Moved for better layout
 
 spellsBtn = tk.Button(
     main,
     text = "Spells",
     font = ("Comic Sans MS", 20),
-    background = "lightblue",
-    command = lambda: update_search_context("Spells", fetch_spells) 
+    background = "lightblue"
 )
 spellsBtn.place(relx = 0.1, rely = 0.075, anchor = tk.CENTER)
 
@@ -414,7 +252,7 @@ charactersBtn = tk.Button(
     text = "Characters",
     font = ("Comic Sans MS", 20),
     background = "lightblue",
-    command = lambda: update_search_context("Characters", fetch_characters)
+    command = lambda: fetch_characters() # Call with no term to get all
 )
 charactersBtn.place(relx = 0.3, rely = 0.075, anchor = tk.CENTER)
 
@@ -423,7 +261,7 @@ moviesBtn = tk.Button(
     text = "Movies",
     font = ("Comic Sans MS", 20),
     background = "lightblue",
-    command = lambda: update_search_context("Movies", fetch_movies)
+    command = fetch_movies
 )
 moviesBtn.place(relx = 0.5, rely = 0.075, anchor = tk.CENTER)
 
@@ -431,8 +269,7 @@ potionsBtn = tk.Button(
     main,
     text = "Potions",
     font = ("Comic Sans MS", 20),
-    background = "lightblue",
-    command = lambda: update_search_context("Potions", fetch_potions) 
+    background = "lightblue"
 )
 potionsBtn.place(relx = 0.7, rely = 0.075, anchor = tk.CENTER)
 
@@ -441,10 +278,13 @@ booksBtn = tk.Button(
     text = "Books",
     font = ("Comic Sans MS", 20),
     background = "lightblue",
-    command = lambda: update_search_context("Books", fetch_books)
+    command = fetch_books
 )
 booksBtn.place(relx = 0.9, rely = 0.075, anchor = tk.CENTER)
 
+# Place the search entry and button (they should be visible when the app starts)
+entry.place(relx=0.25, rely=0.925, anchor="center")
+searchBtn.place(relx = 0.35, rely = 0.925, anchor = tk.CENTER)
 
-# --- Run Main Loop ---
+
 main.mainloop()
