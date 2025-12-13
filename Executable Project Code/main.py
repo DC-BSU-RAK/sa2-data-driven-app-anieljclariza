@@ -60,7 +60,7 @@ def fetch_books():
             
             f"Summary: {summary}\n"
             
-            f"Wiki link: {wiki}\n"
+            f"Wiki: {wiki}\n"
             
             f"\n"
             
@@ -69,6 +69,56 @@ def fetch_books():
             f"\n"
         )
         text_box.insert(END, book_info)
+    text_box.config(state="disabled")
+    text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
+    
+def fetch_movies():
+    url = "https://api.potterdb.com/v1/movies"
+    
+    text_box.delete('1.0', END)
+    
+    response = requests.get(f"{url}?sort=release_date") 
+    
+    data = response.json()
+    movies = data.get('data', [])
+    
+    for movie in movies:
+        attributes = movie.get('attributes',  {})
+        
+        title = attributes.get('title')
+        release_date = attributes.get('release_date')
+        box_office = attributes.get('box_office')
+        budget = attributes.get('budget')
+        rating = attributes.get('rating')
+        summary = attributes.get('summary')
+        trailer = attributes.get('trailer')
+        wiki = attributes.get('wiki')
+        
+        movie_info = (
+            f"Title: {title}\n"
+            
+            f"Release Date: {release_date}\n"
+            
+            f"Box Office: {box_office}\n"
+            
+            f"Budget: {budget}\n"
+            
+            f"Rating: {rating}\n"
+            
+            f"Summary: {summary}\n"
+            
+            f"Trailer: {trailer}\n"
+            
+            f"Wiki: {wiki}\n"
+            
+            f"\n"
+            
+            f"----------\n"
+            
+            f"\n"
+        )
+        text_box.insert(END, movie_info)
+    text_box.config(state="disabled")
     text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
 
 icon = r"Executable Project Code\harry-potter_flaticon.com.png"
@@ -123,7 +173,8 @@ moviesBtn = tk.Button(
     main,
     text = "Movies",
     font = ("Comic Sans MS", 20),
-    background = "lightblue"
+    background = "lightblue",
+    command = fetch_movies
 )
 moviesBtn.place(relx = 0.5, rely = 0.075, anchor = tk.CENTER)
 
