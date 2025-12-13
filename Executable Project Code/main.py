@@ -33,6 +33,7 @@ def set_background(window, image_path, width, height):
         print(f"An error has occured while setting background: {e}")
 
 def fetch_books():
+    text_box.config(state="normal")
     url = "https://api.potterdb.com/v1/books"
     
     text_box.delete('1.0', END)
@@ -73,6 +74,7 @@ def fetch_books():
     text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
     
 def fetch_movies():
+    text_box.config(state="normal")
     url = "https://api.potterdb.com/v1/movies"
     
     text_box.delete('1.0', END)
