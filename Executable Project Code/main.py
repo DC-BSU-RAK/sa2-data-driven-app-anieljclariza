@@ -1,20 +1,18 @@
-import tkinter as tk
-from tkinter import scrolledtext, END
-# Note: You can typically omit 'from tkinter import *' if you use 'tk.' prefix
-import requests
+import tkinter as tk # for gui and shorcut
+from tkinter import scrolledtext, END # for scrollbar and END positions
+import requests # for fetching data from Database and API
 from PIL import Image, ImageTk
 import os
 
+# Set window width and window height
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
 
-# --- Helper Function (No changes needed, but kept for context) ---
+# This function sets the background, accepting respective parameters
 def set_background(window, image_path, width, height):
     try:
         img = Image.open(image_path)
         
-        # Use Image.Resampling.LANCZOS for newer PIL versions
-        # Older versions use Image.LANCZOS
         try:
             resized_img = img.resize((width, height), Image.Resampling.LANCZOS)
         except AttributeError:
@@ -32,6 +30,7 @@ def set_background(window, image_path, width, height):
     except Exception as e:
         print(f"An error has occured while setting background: {e}")
 
+# This fetches the characters category from the database
 def fetch_characters():
     text_box.config(state="normal")
     
@@ -93,7 +92,8 @@ def fetch_characters():
         text_box.insert(END, character_info)
     text_box.config(state="disabled")
     text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
-    
+
+# This fetches the spells category from the database
 def fetch_spells():
     text_box.config(state="normal")
     
@@ -137,7 +137,8 @@ def fetch_spells():
         text_box.insert(END, character_info)
     text_box.config(state="disabled")
     text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
-    
+
+# This fetches the potions category from the database  
 def fetch_potions():
     text_box.config(state="normal")
     
@@ -185,6 +186,7 @@ def fetch_potions():
     text_box.config(state="disabled")
     text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
 
+# This fetches the books category from the database
 def fetch_books():
     text_box.config(state="normal")
     url = "https://api.potterdb.com/v1/books"
@@ -225,7 +227,8 @@ def fetch_books():
         text_box.insert(END, book_info)
     text_box.config(state="disabled")
     text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
-    
+
+# This fetches the movies category from the database    
 def fetch_movies():
     text_box.config(state="normal")
     url = "https://api.potterdb.com/v1/movies"
@@ -276,20 +279,24 @@ def fetch_movies():
     text_box.config(state="disabled")
     text_box.place(relx = 0.5, rely = 0.5, anchor=tk.CENTER)
 
+# icon location
 icon = r"Executable Project Code\harry-potter_flaticon.com.png"
 
+# Window creation
 main = tk.Tk()
 main.title("A Harry Potter Fan's Harry Potter Database Browser")
 main.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
 main.resizable(0, 0)
 
+# Window icon assignment
 window_icon = tk.PhotoImage(file=icon)
 main.iconphoto(True, window_icon)
 
+# Set background image
 mainMenuBackgroundImage = r"Executable Project Code\valerii-siserg-map3.jpg"
-
 set_background(main, mainMenuBackgroundImage, WINDOW_WIDTH, WINDOW_HEIGHT)
 
+# This creates the text box
 text_box = scrolledtext.ScrolledText(
     main,
     wrap = tk.WORD,
@@ -298,12 +305,14 @@ text_box = scrolledtext.ScrolledText(
     font = ("Comic Sans MS", 14)
 )
 
+# This creates the entry field
 entry = tk.Entry(
     main,
     font = ("Comic Sans MS", 14)
 )
 entry.place(relx=0.25, rely=0.925, anchor="center")
 
+# This creates the instructions label
 instructions = tk.Label(
     main,
     text = "Enter character, spell, or potion\nname on search box on the left side and press\nrespective category button above to search.",
@@ -366,4 +375,5 @@ booksBtn = tk.Button(
 )
 booksBtn.place(relx = 0.9, rely = 0.075, anchor = tk.CENTER)
 
+# run mainloop to start program
 main.mainloop()
